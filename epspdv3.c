@@ -35,7 +35,11 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#ifndef _WIN32
 #include <termios.h>
+#else
+#include <libserialport.h>
+#endif
 #include <unistd.h>
 #include <fcntl.h>
 #include "epspv3.h"
@@ -43,7 +47,7 @@
 #include "epspHeaders.h"
 #include "logger.h"
 
-int epsp_port;
+PORT epsp_port;
 
 //int drive_fd[4];
 FILE images[4];
@@ -91,45 +95,76 @@ void initDeviceNames() {
 }
 
 void setSerial(char *s_device) {
+#ifndef _WIN32
 	struct termios t; 
-        if ( s_device[0] != '\0' ) {
-                msg(LOG_DEBUG, "\nSerial port %s specified.\n", s_device);
-                epsp_port = open(s_device, O_RDWR);
-                if(epsp_port == -1)
-                {
-			msg(LOG_ERROR," setSerial; Error opening serial port '%s'. Exiting...\n", s_device);
-                        perror(s_device);
-                        exit(2);
-                } else {
-                        msg(LOG_DEBUG, " setSerial; Serial port \'%s\' (fd: %d) opened succesfully.\n", 
-                                s_device, epsp_port);
-			deviceNames[epsp_port] = s_device;
-                }
-        } else {
-                msg(LOG_DEBUG, "No serial port specified. Exiting...\n");
-                exit(1);
-        }
+	if ( s_device[0] != '\0' ) {
+			msg(LOG_DEBUG, "\nSerial port %s specified.\n", s_device);
+			epsp_port = open(s_device, O_RDWR);
+			if(epsp_port == -1)
+			{
+		msg(LOG_ERROR," setSerial; Error opening serial port '%s'. Exiting...\n", s_device);
+					perror(s_device);
+					exit(2);
+			} else {
+					msg(LOG_DEBUG, " setSerial; Serial port \'%s\' (fd: %d) opened succesfully.\n", 
+							s_device, epsp_port);
+		deviceNames[epsp_port] = s_device;
+			}
+	} else {
+			msg(LOG_DEBUG, "No serial port specified. Exiting...\n");
+			exit(1);
+	}
 
-        if(tcgetattr(epsp_port, &t)==-1) {
-                perror("tcgetattr");
-                msg(LOG_ERROR," setSerial; Some error with the serial port '%s'.\n", s_device);
-                exit(2);
-        }
+	if(tcgetattr(epsp_port, &t)==-1) {
+			perror("tcgetattr");
+			msg(LOG_ERROR," setSerial; Some error with the serial port '%s'.\n", s_device);
+			exit(2);
+	}
 
-        cfsetispeed(&t, B38400);
-        cfsetospeed(&t, B38400);
-        t.c_iflag=t.c_iflag&~(ISTRIP|INLCR|ICRNL|IGNCR|IUCLC|IXON|IXANY|IXOFF);
-        t.c_oflag=t.c_oflag&~(OPOST);
-        t.c_cflag=t.c_cflag&~(CSIZE|PARENB);
-        t.c_cflag|=CS8;
-        t.c_lflag=t.c_lflag&~(ISIG|ICANON|ECHO);
-        t.c_cc[VTIME]=0;
-        t.c_cc[VMIN]=1;
+	cfsetispeed(&t, B38400);
+	cfsetospeed(&t, B38400);
+	t.c_iflag=t.c_iflag&~(ISTRIP|INLCR|ICRNL|IGNCR|IUCLC|IXON|IXANY|IXOFF);
+	t.c_oflag=t.c_oflag&~(OPOST);
+	t.c_cflag=t.c_cflag&~(CSIZE|PARENB);
+	t.c_cflag|=CS8;
+	t.c_lflag=t.c_lflag&~(ISIG|ICANON|ECHO);
+	t.c_cc[VTIME]=0;
+	t.c_cc[VMIN]=1;
 
-        if(tcsetattr(epsp_port, TCSANOW, &t)==-1) {
-                perror("tcsetattr");
-                exit(2);
-        }
+	if(tcsetattr(epsp_port, TCSANOW, &t)==-1) {
+			perror("tcsetattr");
+			exit(2);
+	}
+#else
+	if (sp_get_port_by_name(s_device, &epsp_port) <0) {
+		msg(LOG_ERROR," setSerial; Error getting serial port '%s'.\n", s_device);
+		exit(2);
+	};
+	if (sp_open(epsp_port, SP_MODE_READ_WRITE) < 0) {
+		msg(LOG_ERROR," setSerial; Error opening serial port '%s'.\n", s_device);
+		exit(2);
+	};
+	if (sp_set_baudrate(epsp_port, 38400) < 0) {
+		msg(LOG_ERROR," setSerial; Error setting baud rate for serial port '%s'.\n", s_device);
+		exit(2);
+	};
+	if (sp_set_bits(epsp_port, 8) <0) {
+		msg(LOG_ERROR," setSerial; Error setting 8 bits for serial port '%s'.\n", s_device);
+		exit(2);
+	};
+	if (sp_set_parity(epsp_port, SP_PARITY_NONE) < 0) {
+		msg(LOG_ERROR," setSerial; Error setting no parity for serial port '%s'.\n", s_device);
+		exit(2);
+	};
+	if (sp_set_stopbits(epsp_port, 1) < 0) {
+		msg(LOG_ERROR," setSerial; Error setting one stop bit for serial port '%s'.\n", s_device);
+		exit(2);
+	};
+	if (sp_set_flowcontrol(epsp_port, SP_FLOWCONTROL_DTRDSR) < 0) {
+		msg(LOG_ERROR," setSerial; Error setting no flow control for serial port '%s'.\n", s_device);
+		exit(2);
+	};
+#endif
 }
 
 int mountDiskImage(char *dImage, int driveId, char *unitName) {
@@ -313,7 +348,7 @@ int main(int argc, char *argv[]) {
             msg(LOG_DEBUG, "       %d: %s\n", i, deviceNames[i]);
         }
 	 
-	msg(LOG_INFO, "\nEPSPD: Starting EPSP disk services on %s\n", deviceNames[epsp_port]);
+	msg(LOG_INFO, "\nEPSPD: Starting EPSP disk services on %s\n", "serial port");
 
 	session();
 	return(0);

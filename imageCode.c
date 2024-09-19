@@ -35,8 +35,8 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "epspHeaders.h"
 #include "epspv3.h"
+#include "epspHeaders.h"
 #include "fdc.h"
 #include "logger.h"
 #include "imageCode.h"

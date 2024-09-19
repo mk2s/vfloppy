@@ -164,13 +164,24 @@ int writeBlock(unsigned char *data) {
     return(result);
 }
 
+#ifdef _WIN32
+int read_serial(PORT p, void *buf, size_t count) {
+    return(sp_blocking_read(p, buf, count, 0));
+}
+
+ssize_t write_serial(PORT p, const void *buf, size_t count) {
+    msg(LOG_TRACE, "sizeof size_t %d value %d\n", sizeof(size_t), count );
+    return(sp_blocking_write(p, buf, count, 0));
+}
+#endif
+
 /* Actually serial port read */
-int epspRead(int fd, unsigned char *blk, int len) {
+int epspRead(PORT fd, unsigned char *blk, int len) {
         int sofar  = 0;
 
-        msg(LOG_TRACE, "   epspRead; fd(%d, %s, [%02X])  ", fd, deviceNames[fd], len); 
+        msg(LOG_TRACE, "   epspRead; fd(%d, %s, [%02X])  ", fd, "serial port", len); 
         while(sofar < len) {
-                int got = read(fd, blk, 1);
+                int got = read_serial(fd, blk, 1);
                 if(got <= 0) {
                         if(got < 0) {
                                 perror("epspd: read");
@@ -200,18 +211,18 @@ int epspRead(int fd, unsigned char *blk, int len) {
         return sofar;
 }
 
-void epspWrite(int fd, unsigned char *message, int messageSize) {
+void epspWrite(PORT fd, unsigned char *message, int messageSize) {
         if (getLogLevel() >= LOG_TRACE) {
                 int i;
-                msg(LOG_TRACE, "   epspWrite; fd(%d, %s): ", fd, deviceNames[fd]);
+                msg(LOG_TRACE, "   epspWrite; fd(%d, %s): ", fd, "serial port");
                 for (i = 0; i < messageSize; i++)
                         msg(LOG_TRACE, "%02X ", (int)message[i] & 0xFF);
                 msg(LOG_TRACE, "\n");
         }
-        write(fd, message, messageSize);
+        write_serial(fd, message, messageSize);
 }
 
-int recENQBlock(int epsp_port) {
+int recENQBlock(PORT epsp_port) {
         unsigned char addrMsg[ENC_BLOCK_SIZE];
 
         int len = epspRead(epsp_port, addrMsg, ENC_BLOCK_SIZE);
@@ -387,7 +398,7 @@ int recHeaderBlockProcessing(unsigned char *cmdMsg, int len) {
 	return(recHeaderBlockDataProccessing(cmdMsg));
 }
 
-int recHeaderBlock(int epsp_port) {
+int recHeaderBlock(PORT epsp_port) {
         unsigned char cmdMsg[HEADER_BLK_SIZE];
 
         int len = epspRead(epsp_port, cmdMsg, HEADER_BLK_SIZE);
@@ -395,7 +406,7 @@ int recHeaderBlock(int epsp_port) {
 	return(protocolHandler.recHeaderBlockProcessingFunc(cmdMsg, len));
 }
 
-int recTextBlock(int epsp_port) {
+int recTextBlock(PORT epsp_port) {
         int rawDataSize = driveParam.dataSize + RECV_MSG_SIZE_OFFSET;
         int len = epspRead(epsp_port, dataMsg, rawDataSize);
 
@@ -434,7 +445,7 @@ int recTextBlock(int epsp_port) {
         return(1);
 }
 
-void sendHeaderBlock(int epsp_port) {
+void sendHeaderBlock(PORT epsp_port) {
         unsigned char cmdMsg[HEADER_BLK_SIZE];
 
         cmdMsg[0] = SOH;
@@ -447,20 +458,23 @@ void sendHeaderBlock(int epsp_port) {
         msg(LOG_DEBUG, "  sendHeaderBlock; FNC is %s\n", label[(int)driveParam.command]);
 	driveParam.returnCode = 0; /* setting default */
 	/* check for actually mounted image */
-	int fd = driveInfo.drive_fd[getDriveId()];
-	if (fd == -1) {
-		msg(LOG_DEBUG, "  sendHeaderBlock; no image mounted on fd(%d). returning error\n", fd);
-		protocolHandler.composeSendTextBlock = composeSendReturnCodeTextBlock;
-		protocolHandler.getTextBlockSize = getEmptyTextBlockSize;
-		driveParam.returnCode = BDOS_RDERR;
-	}
+        int driveid = getDriveId();
+        /* skip all this unless driveid is valid */
+        if (driveid != -1){
+            int fd = driveInfo.drive_fd[getDriveId()];
+            if (fd == -1) {
+                msg(LOG_DEBUG, "  sendHeaderBlock; no image mounted on fd(%d). returning error\n", fd);
+                protocolHandler.composeSendTextBlock = composeSendReturnCodeTextBlock;
+                protocolHandler.getTextBlockSize = getEmptyTextBlockSize;
+                driveParam.returnCode = BDOS_RDERR;
+            }
+        }
 	cmdMsg[5] = protocolHandler.getTextBlockSize();
         cmdMsg[6] = sumChars(cmdMsg, HEADER_BLK_SIZE -1);
         epspWrite(epsp_port, cmdMsg, HEADER_BLK_SIZE);
-        msg(LOG_DEBUG, "  sendHeaderBlock; Sent command message\n");
 }
 
-void sendTextBlock(int epsp_port) {
+void sendTextBlock(PORT epsp_port) {
         unsigned char dataMsgBuffer[SEND_BUFFER_SIZE];
         int dataMsgSize;
 	dataMsgSize = protocolHandler.composeSendTextBlock(dataMsgBuffer);

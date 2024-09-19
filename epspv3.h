@@ -75,7 +75,7 @@ struct driveInfo {
 struct behaviour {
 	int  (*recTextBlockFunc)(unsigned char*);
 	int  (*composeSendTextBlock)(unsigned char*);
-	int  (*recHeaderBlockProcessingFunc)();
+	int  (*recHeaderBlockProcessingFunc)(unsigned char *, int);
 	void (*sendNAKFunc)();
 	void (*sendACKFunc)();
 	void (*sendEOTFunc)();
@@ -173,3 +173,13 @@ struct behaviour {
 #define SECTORBASE   0x02B0
 #define BLOCKBASE    0x8AB0
 #define TRACK        (SECTORHEADER + SECTOR) * SECTORSPERTRACK
+
+// serial port abstraction
+#ifdef _WIN32
+  #include <libserialport.h>
+  #define PORT struct sp_port*
+#else
+  #define PORT int
+  #define read_serial read
+  #define write_serial write
+#endif

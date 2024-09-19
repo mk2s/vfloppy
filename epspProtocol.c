@@ -48,13 +48,13 @@ extern char *label[LABEL_SIZE];
 //extern struct driveParameters driveParam;
 //extern struct behaviour protocolHandler;
 
-void sendNAK(int epsp_port) {
+void sendNAK(PORT epsp_port) {
         unsigned char dp=NAK;
         epspWrite(epsp_port, &dp, 1);
         msg(LOG_DEBUG, "  sendNAK; Sent NAK\n");
 }
 
-int waitForACK(int epsp_port) {
+int waitForACK(PORT epsp_port) {
         unsigned char dp;
         epspRead(epsp_port, &dp, 1);
         if (dp == ACK) {
@@ -68,13 +68,13 @@ int waitForACK(int epsp_port) {
         return(0);
 }
 
-void sendACK(int epsp_port) {
+void sendACK(PORT epsp_port) {
         unsigned char dp=ACK;
         epspWrite(epsp_port, &dp, 1);
         msg(LOG_DEBUG, "  sendACK; Sent ACK\n");
 }
 
-int waitForEOT(int epsp_port) {
+int waitForEOT(PORT epsp_port) {
         unsigned char dp;
         epspRead(epsp_port, &dp, 1);
         if (dp == EOT) {
@@ -85,7 +85,7 @@ int waitForEOT(int epsp_port) {
         return(0);
 }
 
-void sendEOT(int epsp_port) {
+void sendEOT(PORT epsp_port) {
         unsigned char dp = EOT;
         epspWrite(epsp_port, &dp, 1);
         msg(LOG_DEBUG, "  sendEOT; Sent EOT\n");

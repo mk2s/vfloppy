@@ -24,25 +24,25 @@
  */
 
 /* epspProtocol.c */
-int  waitForEOT(int epsp_port);
-void sendACK(int epsp_port);
-void sendNAK(int epsp_port);
-int  waitForACK(int epsp_port);
-void sendEOT(int epsp_port);
+int  waitForEOT(PORT epsp_port);
+void sendACK(PORT epsp_port);
+void sendNAK(PORT epsp_port);
+int  waitForACK(PORT epsp_port);
+void sendEOT(PORT epsp_port);
 void nullFunction();
 int  nullFunctionOk();
 
-int  recENQBlock(int epsp_port);
-int  recHeaderBlock(int epsp_port);
-int  recTextBlock(int epsp_port);
-void sendHeaderBlock(int epsp_port);
-void sendTextBlock(int epsp_port);
+int  recENQBlock(PORT epsp_port);
+int  recHeaderBlock(PORT epsp_port);
+int  recTextBlock(PORT epsp_port);
+void sendHeaderBlock(PORT epsp_port);
+void sendTextBlock(PORT epsp_port);
 
 void enableInteraction();
 void disableInteraction();
 
-void epspWrite(int, unsigned char *, int);
-int  epspRead(int, unsigned char *, int);
+void epspWrite(PORT, unsigned char *, int);
+int  epspRead(PORT, unsigned char *, int);
 
 /* imageCode.c */
 unsigned long int getSectorLocation(int track, int record, int driveId);
