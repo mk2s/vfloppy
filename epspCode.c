@@ -457,17 +457,15 @@ void sendHeaderBlock(PORT epsp_port) {
         cmdMsg[4] = driveParam.command;
         msg(LOG_DEBUG, "  sendHeaderBlock; FNC is %s\n", label[(int)driveParam.command]);
 	driveParam.returnCode = 0; /* setting default */
-	/* check for actually mounted image */
-        int driveid = getDriveId();
-        /* skip all this unless driveid is valid */
-        if (driveid != -1){
-            int fd = driveInfo.drive_fd[getDriveId()];
-            if (fd == -1) {
-                msg(LOG_DEBUG, "  sendHeaderBlock; no image mounted on fd(%d). returning error\n", fd);
-                protocolHandler.composeSendTextBlock = composeSendReturnCodeTextBlock;
-                protocolHandler.getTextBlockSize = getEmptyTextBlockSize;
-                driveParam.returnCode = BDOS_RDERR;
-            }
+        if (driveParam.drive > 0) {
+            /* check for actually mounted image */
+	    int fd = driveInfo.drive_fd[getDriveId()];
+	    if (fd == -1) {
+		msg(LOG_DEBUG, "  sendHeaderBlock; no image mounted on fd(%d). returning error\n", fd);
+		protocolHandler.composeSendTextBlock = composeSendReturnCodeTextBlock;
+		protocolHandler.getTextBlockSize = getEmptyTextBlockSize;
+		driveParam.returnCode = BDOS_RDERR;
+	    }
         }
 	cmdMsg[5] = protocolHandler.getTextBlockSize();
         cmdMsg[6] = sumChars(cmdMsg, HEADER_BLK_SIZE -1);
