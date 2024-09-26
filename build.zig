@@ -17,6 +17,8 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
+    const libserialport_dep = b.dependency("libserialport", .{});
+
     const exe = b.addExecutable(.{
         .name = "epspdv3",
         //.root_source_file = b.path("epspdv3.c"),
@@ -27,9 +29,8 @@ pub fn build(b: *std.Build) void {
 
     exe.addCSourceFiles(.{ .files = &.{ "epspCode.c", "epspdv3.c", "epspProtocol.c", "imageCode.c", "logger.c" }, .flags = flags });
     // need to ifdef this only for windows
-    exe.addIncludePath(b.path("../libserialport"));
-    exe.linkSystemLibrary("libserialport");
-    exe.addLibraryPath(b.path("../libserialport/zig-out/lib"));
+    exe.addIncludePath(libserialport_dep.path("."));
+    exe.linkLibrary(libserialport_dep.artifact("libserialport.lib"));
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
