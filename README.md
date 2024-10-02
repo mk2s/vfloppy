@@ -1,5 +1,11 @@
 # vfloppy
 
+### to build on Windows ###
+1. Download and Install Zig 0.13.0 from https://ziglang.org/learn/getting-started/
+1. In the checkout directory run **zig build** this will put executables in zig-out/bin directory.
+
+-----
+
 Implementation of the Epson epsp-protocol for the PX-4 and PX-8 CP/M laptop computers
 
 <P ALIGN="CENTER"><IMG SRC="./vfloppyConsole.png"><IMG SRC="./vfreadDemo.png">
